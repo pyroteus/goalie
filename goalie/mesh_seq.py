@@ -540,6 +540,7 @@ class MeshSeq:
             self.warning("Tape has no blocks!")
             return blocks
 
+        # temporary comment
         # Restrict to solve blocks
         solve_blocks = get_solve_blocks()
         if len(solve_blocks) == 0:

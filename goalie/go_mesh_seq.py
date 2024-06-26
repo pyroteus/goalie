@@ -159,11 +159,14 @@ class GoalOrientedMeshSeq(AdjointMeshSeq):
         self.solve_adjoint(**solver_kwargs)
         enriched_mesh_seq.solve_adjoint(**solver_kwargs)
 
+        tp = self.time_partition
         FWD, ADJ = "forward", "adjoint"
         FWD_OLD = "forward" if self.steady else "forward_old"
         ADJ_NEXT = "adjoint" if self.steady else "adjoint_next"
         P0_spaces = [FunctionSpace(mesh, "DG", 0) for mesh in self]
         for i in range(len(self)):
+            # Set the simulation time constant to current's subinterval start time
+            time = self.get_time(i)
             # Get Functions
             u, u_, u_star, u_star_next, u_star_e = {}, {}, {}, {}, {}
             enriched_spaces = {
@@ -182,12 +185,16 @@ class GoalOrientedMeshSeq(AdjointMeshSeq):
                 u_star_next[f] = Function(fs_e)
                 u_star_e[f] = Function(fs_e)
 
-            # Get forms for each equation in enriched space
             enriched_mesh_seq.fields = mapping
-            forms = enriched_mesh_seq.form(i)
 
             # Loop over each timestep
             for j in range(self.time_partition.num_exports_per_subinterval[i] - 1):
+                # Recompile the form with updated time-dependent constants
+                time.assign(
+                    tp.subintervals[i][0]
+                    + (j + 1) * tp.timesteps[i] * tp.num_timesteps_per_export[i]
+                )
+                forms = enriched_mesh_seq.form(i)
                 # In case of having multiple solution fields that are solved for one
                 # after another, the field that is solved for first uses the values of
                 # latter fields from the previous timestep. Therefore, we must transfer

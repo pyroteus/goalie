@@ -5,6 +5,8 @@ Sequences of meshes corresponding to a :class:`~.TimePartition`.
 from collections.abc import Iterable
 
 import firedrake
+import firedrake.function as ffunc
+import firedrake.functionspace as ffs
 import numpy as np
 from animate.interpolation import transfer
 from animate.quality import QualityMeasure
@@ -187,6 +189,24 @@ class MeshSeq:
                     f"{i}: {nc:7d} cells, {nv:7d} vertices,  max aspect ratio {mar:.2f}"
                 )
             debug(100 * "-")
+        self._time = [
+            ffunc.Function(ffs.FunctionSpace(mesh, "R", 0)) for mesh in meshes
+        ]
+
+    def get_time(self, subinterval):
+        """
+        Get the time :class:`~.Function` associated with a given subinterval,
+        initialised to the value at the start of the subinterval, plus one timestep.
+
+        :arg subinterval: the subinterval index
+        :type subinterval: :class:`int`
+        :return: the associated $R$-space time Function
+        :rtype: :class:`~.Function`
+        """
+        start_time = self.time_partition[subinterval].start_time
+        dt = self.time_partition.timesteps[subinterval]
+        self._time[subinterval].assign(start_time + dt)
+        return self._time[subinterval]
 
     def plot(self, fig=None, axes=None, **kwargs):
         """
